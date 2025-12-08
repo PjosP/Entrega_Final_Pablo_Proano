@@ -31,14 +31,59 @@ La base de datos utilizada en este proyecto corresponde al conjunto SENAE_Import
 
 Para el desarrollo del proyecto se consideran como **variables de entrada** aquellas asociadas a la información conocida al arribo de la mercancía a Aduana, tales como SUBPARTIDA, PAIS_ORIGEN, REGIMEN, PESO_NETO, FOB, FLETE, SEGURO, CANTIDAD_FISICA y CANTIDAD_COMERCIAL. **Como variables de salida** se definen los principales tributos calculados por la autoridad aduanera, entre ellos ADVALOREM, ICE, FODINFA, SALVAGUARDIA e IVA. Si bien estos valores se determinan mediante ecuaciones, formulas , tablas arancelarias y normativa específica, el objetivo del proyecto es **desarrollar un modelo basado en datos** que permita estimar dichos tributos aun sin conocer explícitamente estas ecuaciones, utilizando únicamente la información histórica contenida en la base de datos. 
 
-## Carga de Datos
-En esta sección cargamos los datos de la base de datos que conseguimos para este trabajo.
+## Carga y tratamiento de Datos
+En esta sección cargamos los datos de la base que conseguimos para este trabajo.
 ```{r}
 library(readr)
 aduana  <- read_delim("https://raw.githubusercontent.com/PjosP/Entrega_Final_Pablo_Proano/refs/heads/main/base_aduana_10.csv", 
     delim = "|", escape_double = FALSE, trim_ws = TRUE)
-dim(aduana)
-names(aduana)
 head(aduana)
 ```
+
+Vamos a revisar las dimenciones de la base de datos:
+```{r}
+dim(aduana)
+```
+Vamos a ver de que tipo son los campos de la base de datos:
+```{r}
+str(aduana)
+```
+
+Vamos a revisar si existen elementos en blanco o elementos duplicados:
+```{r}
+anyNA(aduana)
+anyDuplicated(aduana)
+```
+Podemos ver que no hay celdas en blanco ni duplicadas.
+
+La base de datos tiene algunas columnas que no son relevantes para nuestro estudio, por lo que vamos a crear una nueva base solo con las columnas que por ahora pensamos que son relevantes y lo vamos a almacenar en una base de datos que se llame **base_seleccionada**:
+
+```{r}
+# Definir variables de entrada
+vars_entrada <- c(
+  "TIPO_IMPORTACION", "REGIMEN", "SUBPARTIDA", "PAIS_ORIGEN",
+  "TRATAMIENTO_PREFERENCIAL", "CONVENIO_INTERNACIONAL",
+  "PESO_NETO", "CANTIDAD_FISICA", "CANTIDAD_COMERCIAL",
+  "TIPO_UNIDAD_FISICA", "TIPO_UNIDAD_COMERCIAL",
+  "FOB", "FLETE", "SEGURO", "CIF"
+)
+
+# Definir variables de salida
+vars_salida <- c(
+  "ADVALOREM","ICE_ADVALOREM",
+  "FODINFA", "SALVAGUARDIA", "IVA"
+)
+
+# Unir las variables seleccionadas
+vars_seleccionadas <- c(vars_entrada, vars_salida)
+
+# Crear la nueva base de datos
+base_seleccionada <- aduana[, vars_seleccionadas]
+
+# Verificación básica
+dim(base_seleccionada)
+```
+
+
+
 
