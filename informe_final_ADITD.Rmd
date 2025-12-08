@@ -1,0 +1,44 @@
+---
+title: "Entrega_Final_PP"
+author: "Pablo Proaño"
+date: "2025-12-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# **PROYECTO FINAL**
+# Analítica de Datos Industriales para la Toma de Decisiones con Apoyo de AI (Curso ADI&TD-IA) 
+
+## Datos del Estudiante:
+**Nombre:** Pablo Proaño
+
+**mail:** pablo.proano@epn.edu.ec
+
+**Telf:** +593 98 244 0935
+
+## Descripción del Proyecto
+
+El presente proyecto tiene como objetivo analizar un conjunto de datos correspondiente a operaciones de importación registradas por el Servicio Nacional de Aduana del Ecuador (SENAE), específicamente del conjunto denominado SENAE_Importaciones Régimen General, el cual contiene el detalle de las importaciones por fecha de ingreso de la Declaración Aduanera de Importación (DAI) con estado de salida autorizada. La base de datos, disponible en formato CSV y actualizada a diciembre de 2025, es utilizada para realizar procesos de carga, limpieza, descripción estadística y visualización de variables relacionadas con valor, peso, cantidades e impuestos.
+
+## Descripción de la Base  de Datos
+
+La base de datos utilizada en este proyecto corresponde al conjunto SENAE_Importaciones Régimen General, publicado por el Servicio Nacional de Aduana del Ecuador (SENAE), y contiene información detallada de las operaciones de importación registradas mediante la Declaración Aduanera de Importación (DAI) con estado de salida autorizada. El conjunto de datos se presenta en formato CSV y está compuesto por variables de tipo categórico y numérico. 
+
+## Objetivo del Proyecto
+
+Para el desarrollo del proyecto se consideran como **variables de entrada** aquellas asociadas a la información conocida al arribo de la mercancía a Aduana, tales como SUBPARTIDA, PAIS_ORIGEN, REGIMEN, PESO_NETO, FOB, FLETE, SEGURO, CANTIDAD_FISICA y CANTIDAD_COMERCIAL. **Como variables de salida** se definen los principales tributos calculados por la autoridad aduanera, entre ellos ADVALOREM, ICE, FODINFA, SALVAGUARDIA e IVA. Si bien estos valores se determinan mediante ecuaciones, formulas , tablas arancelarias y normativa específica, el objetivo del proyecto es **desarrollar un modelo basado en datos** que permita estimar dichos tributos aun sin conocer explícitamente estas ecuaciones, utilizando únicamente la información histórica contenida en la base de datos. 
+
+## Carga de Datos
+En esta sección cargamos los datos de la base de datos que conseguimos para este trabajo.
+```{r}
+library(readr)
+aduana  <- read_delim("https://raw.githubusercontent.com/PjosP/Entrega_Final_Pablo_Proano/refs/heads/main/base_aduana_10.csv", 
+    delim = "|", escape_double = FALSE, trim_ws = TRUE)
+dim(aduana)
+names(aduana)
+head(aduana)
+```
+
