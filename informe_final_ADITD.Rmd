@@ -46,7 +46,7 @@ dim(aduana)
 ```
 Vamos a ver de que tipo son los campos de la base de datos:
 ```{r}
-str(aduana)
+sapply(aduana, class)
 ```
 
 Vamos a revisar si existen elementos en blanco o elementos duplicados:
@@ -59,31 +59,106 @@ Podemos ver que no hay celdas en blanco ni duplicadas.
 La base de datos tiene algunas columnas que no son relevantes para nuestro estudio, por lo que vamos a crear una nueva base solo con las columnas que por ahora pensamos que son relevantes y lo vamos a almacenar en una base de datos que se llame **base_seleccionada**:
 
 ```{r}
-# Definir variables de entrada
+# Definimos las variables de entrada
 vars_entrada <- c(
-  "TIPO_IMPORTACION", "REGIMEN", "SUBPARTIDA", "PAIS_ORIGEN",
-  "TRATAMIENTO_PREFERENCIAL", "CONVENIO_INTERNACIONAL",
+  "REGIMEN", "SUBPARTIDA", "PAIS_ORIGEN", "CONVENIO_INTERNACIONAL",
   "PESO_NETO", "CANTIDAD_FISICA", "CANTIDAD_COMERCIAL",
   "TIPO_UNIDAD_FISICA", "TIPO_UNIDAD_COMERCIAL",
   "FOB", "FLETE", "SEGURO", "CIF"
 )
 
-# Definir variables de salida
+# Definimos las variables de salida
 vars_salida <- c(
   "ADVALOREM","ICE_ADVALOREM",
-  "FODINFA", "SALVAGUARDIA", "IVA"
+  "FODINFA", "IVA"
 )
 
-# Unir las variables seleccionadas
+# Unimos las variables seleccionadas
 vars_seleccionadas <- c(vars_entrada, vars_salida)
 
-# Crear la nueva base de datos
+# Creamos la nueva base de datos
 base_seleccionada <- aduana[, vars_seleccionadas]
 
 # Verificación básica
 dim(base_seleccionada)
 ```
 
+## Analisis multivariante
+
+Para saber si nuestro proyecto es Viable, voy a obtener la matriz de acrianzaras, para analizar si las variables están relacionadas y podría predecir unas en función de otras.
+
+Sin embargo, previo a esto voy a reemplazar las filas que tienen texto por números, y voy a almacenar los resultados en una variable llamada **base_numerica** 
+
+```{r}
+# Se identificaron automáticamente las columnas que son de tipo carácter (texto)
+vars_char <- names(base_seleccionada)[sapply(base_seleccionada, is.character)]
+
+# Se creó una copia de la base original para trabajar con la versión numérica
+base_numerica <- base_seleccionada
+
+# Se transformaron las variables categóricas a valores numéricos mediante codificación de factores
+base_numerica[vars_char] <- lapply(base_numerica[vars_char], function(x) {
+  as.numeric(as.factor(x))
+})
+
+# Se verificó el tipo de dato de todas las columnas luego de la transformación
+sapply(base_numerica, class)
+
+```
+**Nota:** Yo solía hacer esto a mano, investigando en Internet, vi que había dos formas automáticas de hacerlo, la primera usando el método de factores y la segunda usando el método "One-Hot Encoding", la primera sirve para modelos basados en árboles y métodos de clasificación que no dependen de relaciones lineales, como voy a usar random forest en mi proyecto decidí usar esa para no hacer mas grande la base. 
 
 
+Ahora voy a normalizar la base y la voy a guardar en una nueva base de datos llamada **base_normalizada**
+```{r}
+# Función de normalización Min-Max
+normalizar_minmax <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}
+
+# Aplicación de la normalización a todas las columnas
+base_normalizada <- as.data.frame(
+  lapply(base_numerica, normalizar_minmax)
+)
+
+# Verificación
+summary(base_normalizada)
+
+
+```
+
+
+Ahora voy a calcular la matriz de covarianzas a partir de la base de datos normalizada, con el fin de analizar el grado de variación conjunta entre las variables de entrada y salida, y evaluar su relación estadística previa a la construcción del modelo.
+
+```{r}
+# Se calculó la matriz de covarianzas de la base de datos normalizada
+matriz_covarianzas <- cov(base_normalizada)
+
+# Se visualiza la matriz de covarianzas
+matriz_covarianzas
+
+```
+
+Esta matriz, me suele parecer un poco confusa, por lo que personalmente uso la matriz de correlaciones:
+
+```{r}
+# Se calculó la matriz de covarianzas de la base de datos normalizada
+matriz_correlaciones <- cor(base_normalizada)
+
+# Se visualiza la matriz de covarianzas
+matriz_correlaciones
+```
+
+
+
+Voy a representar la matriz de correlaciones usando un mapa de calor, para analizar de forma visual la intensidad y el signo de la relación entre las variables de entrada y salida. 
+```{r}
+library(corrplot)
+# Se generó el gráfico de correlación
+corrplot(matriz_correlaciones, method = "color", type = "upper")
+```
+
+**Nota:** Tuve que instalar la librería "corrplot"
+
+
+Este gráfico facilitó la identificación de dependencias fuertes, débiles y relaciones inversas entre variables.
 
