@@ -42,7 +42,7 @@ aduana  <- read_delim("https://raw.githubusercontent.com/PjosP/Entrega_Final_Pab
 head(aduana)
 ```
 
-Vamos a revisar las dimenciones de la base de datos:
+Vamos a revisar las dimensiones de la base de datos:
 ```{r}
 dim(aduana)
 ```
@@ -50,7 +50,7 @@ Vamos a ver de que tipo son los campos de la base de datos:
 ```{r}
 sapply(aduana, class)
 ```
-
+# Tratamiento Inicial del Datos
 Vamos a revisar si existen elementos en blanco o elementos duplicados:
 ```{r}
 anyNA(aduana)
@@ -85,18 +85,103 @@ base_seleccionada <- aduana[, vars_seleccionadas]
 dim(base_seleccionada)
 ```
 
+Vamos a realizar gráficos de cajas y bigotes para ver como se distribuyen los datos de las salidas y si existen atípicos.
+
+```{r}
+boxplot(
+  base_seleccionada[, c("IVA", "ADVALOREM", "ICE_ADVALOREM", "FODINFA")],
+  main = "Diagrama de Cajas de las Variables de Salida",
+  ylab = "Valor del tributo",
+  col = c("lightblue", "lightgreen", "lightpink", "lightgray"),
+  border = "black",
+  las = 1   # etiquetas horizontales
+)
+
+
+```
+El diagrama de cajas de las variables de salida evidencia una alta asimetría y una gran presencia de valores atípicos.
+
+Esto podría impactar negativamente en nuestro estudio, por lo que vamos a proceder a eliminar esos datos atípicos.
+
+```{r}
+# Función para eliminar atípicos usando IQR
+eliminar_outliers_IQR <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  limite_inf <- Q1 - 1.5 * IQR_val
+  limite_sup <- Q3 + 1.5 * IQR_val
+  x >= limite_inf & x <= limite_sup
+}
+
+filtro_IVA  <- eliminar_outliers_IQR(base_seleccionada$IVA)
+filtro_ADV  <- eliminar_outliers_IQR(base_seleccionada$ADVALOREM)
+filtro_ICE  <- eliminar_outliers_IQR(base_seleccionada$ICE_ADVALOREM)
+filtro_FOD  <- eliminar_outliers_IQR(base_seleccionada$FODINFA)
+
+filtro_total <- filtro_IVA & filtro_ADV & filtro_ICE & filtro_FOD
+
+base_seleccionada_sin_outliers <- base_seleccionada[filtro_total, ]
+
+dim(aduana)
+dim(base_seleccionada_sin_outliers)
+
+
+```
+Para ver como la función anterior impacto a nuestra base de datos, vamos a volver a obtener el diagrama de cajas:
+
+
+```{r}
+boxplot(
+  base_seleccionada_sin_outliers[, c("IVA", "ADVALOREM", "ICE_ADVALOREM", "FODINFA")],
+  main = "Diagrama de Cajas de las Variables de Salida",
+  ylab = "Valor del tributo",
+  col = c("lightblue", "lightgreen", "lightpink", "lightgray"),
+  border = "black",
+  las = 1   # etiquetas horizontales
+)
+
+
+```
+**Nota:** Después de la eliminación de Atípicos, la salida de mi estudio `ICCE_ADVALOREN` tienen toda una columna de ceros, por lo que la voy a eliminar de mi estudio.
+
+```{r}
+# Definimos las variables de entrada
+vars_entrada <- c(
+  "REGIMEN", "SUBPARTIDA", "PAIS_ORIGEN", "CONVENIO_INTERNACIONAL",
+  "PESO_NETO", "CANTIDAD_FISICA", "CANTIDAD_COMERCIAL",
+  "TIPO_UNIDAD_FISICA", "TIPO_UNIDAD_COMERCIAL",
+  "FOB", "FLETE", "SEGURO", "CIF"
+)
+
+# Definimos las variables de salida
+vars_salida <- c(
+  "ADVALOREM",
+  "FODINFA", "IVA"
+)
+
+# Unimos las variables seleccionadas
+vars_seleccionadas <- c(vars_entrada, vars_salida)
+
+# Creamos la nueva base de datos
+nueva_base_seleccionada <- base_seleccionada_sin_outliers[, vars_seleccionadas]
+
+# Verificación básica
+dim(nueva_base_seleccionada)
+```
+
 ## Analisis multivariante
 
-Para saber si nuestro proyecto es Viable, voy a obtener la matriz de acrianzaras, para analizar si las variables están relacionadas y podría predecir unas en función de otras.
+Para saber si nuestro proyecto es Viable, voy a obtener la matriz de covarianzas, para analizar si las variables están relacionadas y podría predecir unas en función de otras.
 
 Sin embargo, previo a esto voy a reemplazar las filas que tienen texto por números, y voy a almacenar los resultados en una variable llamada **base_numerica** 
 
 ```{r}
 # Se identificaron automáticamente las columnas que son de tipo carácter (texto)
-vars_char <- names(base_seleccionada)[sapply(base_seleccionada, is.character)]
+vars_char <- names(nueva_base_seleccionada)[sapply(nueva_base_seleccionada, is.character)]
 
 # Se creó una copia de la base original para trabajar con la versión numérica
-base_numerica <- base_seleccionada
+base_numerica <- nueva_base_seleccionada
 
 # Se transformaron las variables categóricas a valores numéricos mediante codificación de factores
 base_numerica[vars_char] <- lapply(base_numerica[vars_char], function(x) {
@@ -206,20 +291,6 @@ barplot(cor_ADVALOREM,
         xlab = "Variables de entrada")
 
 ```
-
-**Para el ICE_ADVALOREM:**
-```{r}
-cor_ICE_ADVALOREM <- matriz_correlacion[vars_entrada, "ICE_ADVALOREM"]
-
-# Se generó el gráfico de barras de las correlaciones
-barplot(cor_ICE_ADVALOREM,
-        las = 2,                 # rota etiquetas del eje X
-        main = "Correlación de ICE_ADVALOREM con las variables de entrada",
-        ylab = "Coeficiente de correlación",
-        xlab = "Variables de entrada")
-
-```
-
 ## Resultados
 
 A partir del análisis de correlación se observa que, para la salida **IVA**, las variables de entrada con mayor impacto son:
@@ -236,7 +307,7 @@ Para la salida **FODINFA**, las variables de entrada de mayor influencia son:
 - `CIF`
 - `FOB`
 
-Finalmente, para las salidas **ADVALOREM** e **ICE_ADVALOREM**, las variables de entrada más relevantes son:
+Finalmente, para las salidas **ADVALOREM**, las variables de entrada más relevantes son:
 
 - `FLETE`
 - `FOB`
@@ -258,14 +329,12 @@ En la siguiente etapa se generarán **cuatro conjuntos de datos**, uno para cada
 
 base_IVA <- aduana[, c("FLETE", "FOB", "CIF","TIPO_UNIDAD_COMERCIAL", "IVA")]
 base_ADVALOREM <- aduana[, c("FLETE", "FOB", "CIF", "ADVALOREM")]
-base_ICE_ADVALOREM <- aduana[, c("FLETE", "FOB", "CIF", "ICE_ADVALOREM")]
 base_FODINFA <- aduana[, c("FLETE", "FOB", "CIF", "FODINFA")]
 
 # Verificación rápida de las cuatro bases creadas
 list(
   IVA = dim(base_IVA),
   ADVALOREM = dim(base_ADVALOREM),
-  ICE_ADVALOREM = dim(base_ICE_ADVALOREM),
   FODINFA = dim(base_FODINFA)
 )
 
@@ -303,7 +372,6 @@ A partir de la muestra se construyeron las bases específicas para cada salida, 
 #Bases específicas por salida, construidas a partir de la muestra
 base_IVA <- aduana_muestra[, c("FLETE", "FOB", "CIF","TIPO_UNIDAD_COMERCIAL", "IVA")]
 base_ADVALOREM <- aduana_muestra[, c("FLETE", "FOB", "CIF","REGIMEN", "ADVALOREM")]
-base_ICE_ADVALOREM <- aduana_muestra[, c("FLETE", "FOB", "CIF","REGIMEN", "ICE_ADVALOREM")]
 base_FODINFA <- aduana_muestra[, c("FLETE", "FOB", "CIF","PESO_NETO", "FODINFA")]
 
 #División en entrenamiento (70%) y prueba (30%)
@@ -316,9 +384,6 @@ test_IVA <- base_IVA[-idx_entrenamiento, ]
 
 train_ADVALOREM <- base_ADVALOREM[idx_entrenamiento, ]
 test_ADVALOREM <- base_ADVALOREM[-idx_entrenamiento, ]
-
-train_ICE_ADVALOREM <- base_ICE_ADVALOREM[idx_entrenamiento, ]
-test_ICE_ADVALOREM <- base_ICE_ADVALOREM[-idx_entrenamiento, ]
 
 train_FODINFA <- base_FODINFA[idx_entrenamiento, ]
 test_FODINFA <- base_FODINFA[-idx_entrenamiento, ]
@@ -346,14 +411,6 @@ mtry = 2,
 importance = TRUE
 )
 
-modelo_ICE_ADVALOREM <- randomForest(
-ICE_ADVALOREM ~ FLETE + FOB + CIF +REGIMEN,
-data = train_ICE_ADVALOREM,
-ntree = 150,
-mtry = 2,
-importance = TRUE
-)
-
 modelo_FODINFA <- randomForest(
 FODINFA ~ FLETE + FOB + CIF + PESO_NETO,
 data = train_FODINFA,
@@ -370,7 +427,6 @@ Con los modelos ajustados, se generan las predicciones sobre el conjunto de prue
 
 pred_IVA           <- predict(modelo_IVA, test_IVA)
 pred_ADVALOREM     <- predict(modelo_ADVALOREM, test_ADVALOREM)
-pred_ICE_ADVALOREM <- predict(modelo_ICE_ADVALOREM, test_ICE_ADVALOREM)
 pred_FODINFA       <- predict(modelo_FODINFA, test_FODINFA)
 
 # Funciones para RMSE y R²
@@ -386,17 +442,15 @@ r2 <- function(real, pred) {
 # Cálculo de métricas para cada modelo
 
 resultados_modelos <- data.frame(
-Salida = c("IVA", "ADVALOREM", "ICE_ADVALOREM", "FODINFA"),
+Salida = c("IVA", "ADVALOREM", "FODINFA"),
 RMSE = c(
 rmse(test_IVA$IVA, pred_IVA),
 rmse(test_ADVALOREM$ADVALOREM, pred_ADVALOREM),
-rmse(test_ICE_ADVALOREM$ICE_ADVALOREM, pred_ICE_ADVALOREM),
 rmse(test_FODINFA$FODINFA, pred_FODINFA)
 ),
 R2 = c(
 r2(test_IVA$IVA, pred_IVA),
 r2(test_ADVALOREM$ADVALOREM, pred_ADVALOREM),
-r2(test_ICE_ADVALOREM$ICE_ADVALOREM, pred_ICE_ADVALOREM),
 r2(test_FODINFA$FODINFA, pred_FODINFA)
 )
 )
@@ -416,11 +470,6 @@ Los resultados obtenidos con el modelo Random Forest muestran un comportamiento 
   - Se obtuvo un \(R^2 = -0.4860\), lo que indica que el modelo tiene un desempeño peor que el uso del valor promedio como estimador.
   - El RMSE = 9909.79 evidencia errores elevados en la predicción.
   - Esto confirma que el ADVALOREM está dominado por reglas arancelarias asociadas a la subpartida, el régimen y los convenios, las cuales no pueden ser capturadas adecuadamente por el modelo bajo este enfoque.
-
-- **ICE\_ADVALOREM**:
-  - El \(R^2 = -0.2783\) muestra que el modelo no logra identificar un patrón estadístico útil para esta variable.
-  - El RMSE = 3627.67 sigue siendo elevado en relación con la magnitud del impuesto.
-  - Este comportamiento confirma que el ICE depende de criterios específicos de tipo de mercancía y normativa tributaria, más que de relaciones continuas entre variables monetarias.
 
 - **FODINFA**:
   - Se alcanzó un \(R^2 = 0.9856\), lo que representa un ajuste excelente entre los valores reales y los predichos.
