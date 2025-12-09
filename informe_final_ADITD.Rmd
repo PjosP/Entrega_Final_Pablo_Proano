@@ -142,23 +142,112 @@ Esta matriz, me suele parecer un poco confusa, por lo que personalmente uso la m
 
 ```{r}
 # Se calculó la matriz de covarianzas de la base de datos normalizada
-matriz_correlaciones <- cor(base_normalizada)
+matriz_correlacion <- cor(base_normalizada)
 
 # Se visualiza la matriz de covarianzas
-matriz_correlaciones
+matriz_correlacion
 ```
 
 
 
-Voy a representar la matriz de correlaciones usando un mapa de calor, para analizar de forma visual la intensidad y el signo de la relación entre las variables de entrada y salida. 
+Voy a representar la matriz de correlaciones usando un mapa de calor, para analizar de forma visual la intensidad y el signo de la relación entre las variables de entrada y salida. Este gráfico facilitó la identificación de dependencias fuertes, débiles y relaciones inversas entre variables.
 ```{r}
 library(corrplot)
 # Se generó el gráfico de correlación
-corrplot(matriz_correlaciones, method = "color", type = "upper")
+corrplot(matriz_correlacion, method = "color", type = "upper")
 ```
 
 **Nota:** Tuve que instalar la librería "corrplot"
 
+Para ver los resultados por separado, voy a generar gráficos de barras para cada una de las salidas, quiero ver cuales de las variables de entrada tienen mayor impacto en las salidas.
 
-Este gráfico facilitó la identificación de dependencias fuertes, débiles y relaciones inversas entre variables.
+Esto lo hago por que no un gran numero de variables de entrada y no quiero usarlas todas, solo las 4 mas relevantes.
+
+**Para el IVA:**
+```{r}
+# Se extrajo la correlación de IVA con todas las variables de entrada
+cor_iva <- matriz_correlacion[vars_entrada, "IVA"]
+
+# Se generó el gráfico de barras de las correlaciones
+barplot(cor_iva,
+        las = 2,                 # rota etiquetas del eje X
+        main = "Correlación de IVA con las variables de entrada",
+        ylab = "Coeficiente de correlación",
+        xlab = "Variables de entrada")
+
+```
+
+
+**Para el FODINFA:**
+```{r}
+cor_FODINFA <- matriz_correlacion[vars_entrada, "FODINFA"]
+
+# Se generó el gráfico de barras de las correlaciones
+barplot(cor_FODINFA,
+        las = 2,                 # rota etiquetas del eje X
+        main = "Correlación de FODINFA con las variables de entrada",
+        ylab = "Coeficiente de correlación",
+        xlab = "Variables de entrada")
+
+```
+
+
+**Para el ADVALOREM:**
+```{r}
+cor_ADVALOREM <- matriz_correlacion[vars_entrada, "ADVALOREM"]
+
+# Se generó el gráfico de barras de las correlaciones
+barplot(cor_ADVALOREM,
+        las = 2,                 # rota etiquetas del eje X
+        main = "Correlación de ADVALOREM con las variables de entrada",
+        ylab = "Coeficiente de correlación",
+        xlab = "Variables de entrada")
+
+```
+
+**Para el ICE_ADVALOREM:**
+```{r}
+cor_ICE_ADVALOREM <- matriz_correlacion[vars_entrada, "ICE_ADVALOREM"]
+
+# Se generó el gráfico de barras de las correlaciones
+barplot(cor_ICE_ADVALOREM,
+        las = 2,                 # rota etiquetas del eje X
+        main = "Correlación de ICE_ADVALOREM con las variables de entrada",
+        ylab = "Coeficiente de correlación",
+        xlab = "Variables de entrada")
+
+```
+
+## Resultados
+
+A partir del análisis de correlación se observa que, para la salida **IVA**, las variables de entrada con mayor impacto son:
+
+- `FLETE`
+- `FOB`
+- `CIF`
+- `TIPO_UNIDAD_COMERCIAL`
+
+Para la salida **FODINFA**, las variables de entrada de mayor influencia son:
+
+- `FLETE`
+- `PESO_NETO`
+- `CIF`
+- `FOB`
+
+Finalmente, para las salidas **ADVALOREM** e **ICE_ADVALOREM**, las variables de entrada más relevantes son:
+
+- `FLETE`
+- `FOB`
+- `CIF`
+- `REGIMEN`
+
+De manera general, se puede concluir que las variables de entrada **`FLETE`, `FOB` y `CIF`** presentan el mayor impacto sobre todas las salidas analizadas, mientras que una cuarta variable (como `TIPO_UNIDAD_COMERCIAL`, `PESO_NETO` o `REGIMEN`) aporta información adicional específica dependiendo de cada tributo.
+
+## Resultados del análisis multivariable
+
+Como resultado del estudio, se analizó el impacto de las variables de entrada sobre las salidas del modelo, identificando aquellas con mayor relevancia para la predicción de los tributos. De esta forma, se pasó de considerar inicialmente **13 variables de entrada** a trabajar únicamente con **3 variables principales** (`FLETE`, `FOB` y `CIF`).
+
+En la siguiente etapa se generarán **cuatro conjuntos de datos**, uno para cada variable de salida, en los cuales las tres primeras columnas corresponderán a las variables de entrada seleccionadas y la última columna a la salida específica de cada modelo.
+
+
 
