@@ -916,7 +916,7 @@ que una cuarta variable (como <code>TIPO_UNIDAD_COMERCIAL</code>,
 adicional específica dependiendo de cada tributo.</p>
 </div>
 <div id="resultados-del-análisis-multivariable" class="section level2">
-<h2>Resultados del análisis multivariable</h2>
+<h2>Resultados del Análisis Multivariable</h2>
 <p>Como resultado del estudio, se analizó el impacto de las variables de
 entrada sobre las salidas del modelo, identificando aquellas con mayor
 relevancia para la predicción de los tributos. De esta forma, se pasó de
@@ -928,6 +928,234 @@ datos</strong>, uno para cada variable de salida, en los cuales las tres
 primeras columnas corresponderán a las variables de entrada
 seleccionadas y la última columna a la salida específica de cada
 modelo.</p>
+<pre class="r"><code># Se crearon las bases de datos específicas para cada tributo
+# usando como variables de entrada FLETE, FOB y CIF
+# y como variable de salida el tributo correspondiente
+
+base_IVA &lt;- aduana[, c(&quot;FLETE&quot;, &quot;FOB&quot;, &quot;CIF&quot;,&quot;TIPO_UNIDAD_COMERCIAL&quot;, &quot;IVA&quot;)]
+base_ADVALOREM &lt;- aduana[, c(&quot;FLETE&quot;, &quot;FOB&quot;, &quot;CIF&quot;, &quot;ADVALOREM&quot;)]
+base_ICE_ADVALOREM &lt;- aduana[, c(&quot;FLETE&quot;, &quot;FOB&quot;, &quot;CIF&quot;, &quot;ICE_ADVALOREM&quot;)]
+base_FODINFA &lt;- aduana[, c(&quot;FLETE&quot;, &quot;FOB&quot;, &quot;CIF&quot;, &quot;FODINFA&quot;)]
+
+# Verificación rápida de las cuatro bases creadas
+list(
+  IVA = dim(base_IVA),
+  ADVALOREM = dim(base_ADVALOREM),
+  ICE_ADVALOREM = dim(base_ICE_ADVALOREM),
+  FODINFA = dim(base_FODINFA)
+)</code></pre>
+<pre><code>## $IVA
+## [1] 133493      5
+## 
+## $ADVALOREM
+## [1] 133493      4
+## 
+## $ICE_ADVALOREM
+## [1] 133493      4
+## 
+## $FODINFA
+## [1] 133493      4</code></pre>
+</div>
+<div id="modelo-random-forest" class="section level2">
+<h2>Modelo Random Forest</h2>
+<p>Con el fin de modelar la relación no lineal entre las variables de
+entrada (<code>FLETE</code>, <code>FOB</code> y <code>CIF</code>) y los
+tributos aduaneros de salida (<code>IVA</code>, <code>ADVALOREM</code>,
+<code>ICE_ADVALOREM</code> y <code>FODINFA</code>), se emplea el
+algoritmo <strong>Random Forest de regresión</strong>. Este método
+basado en ensambles de árboles de decisión permite capturar
+interacciones complejas entre las variables, reducir la varianza del
+modelo y mejorar la capacidad de generalización, siendo especialmente
+adecuado para conjuntos de datos con relaciones no lineales y posible
+multicolinealidad entre las variables de entrada.</p>
+<p>Primero cargamos la ibreria y nos aseguramos de que cada vez que se
+corra este programa se obtengan los mismos resultados:</p>
+<pre class="r"><code># Se cargó la librería necesaria para Random Forest
+library(randomForest)</code></pre>
+<pre><code>## randomForest 4.7-1.2</code></pre>
+<pre><code>## Type rfNews() to see new features/changes/bug fixes.</code></pre>
+<pre class="r"><code># Se fijó la semilla para garantizar reproducibilidad
+set.seed(123)</code></pre>
+<p>Mi idea inicial fue utilizar el 75% de los datos para entrenar el
+modelo y el 25% restante para validarlo. Sin embargo, la base de datos
+original contiene <strong>133 493</strong> filas y, al aplicar el modelo
+de Random Forest sobre todo el conjunto, se presentaba un cuello de
+botella computacional que podía superar los 20 minutos de ejecución.</p>
+<p>Por este motivo, se decidió trabajar con una <strong>muestra
+aleatoria del 10%</strong> de la base original, equivalente a <strong>13
+400 filas</strong>, que se considera representativa para los fines de
+este trabajo. Sobre esta muestra se utiliza el <strong>70% de los datos
+para el entrenamiento</strong> de los modelos y el <strong>30% restante
+para la validación</strong>.</p>
+<pre class="r"><code>n_total &lt;- nrow(base_numerica)
+tam_muestra &lt;- min(13400, n_total)
+idx_muestra &lt;- sample(seq_len(n_total), size = tam_muestra)
+aduana_muestra &lt;- base_numerica[idx_muestra, ]
+dim(aduana_muestra)</code></pre>
+<pre><code>## [1] 13400    17</code></pre>
+<p>A partir de la muestra se construyeron las bases específicas para
+cada salida, utilizando como variables de entrada <code>FLETE</code>,
+<code>FOB</code> y <code>CIF</code>. Posteriormente, cada base se
+dividió en un conjunto de entrenamiento (70%) y otro de prueba
+(30%):</p>
+<pre class="r"><code>#Bases específicas por salida, construidas a partir de la muestra
+base_IVA &lt;- aduana_muestra[, c(&quot;FLETE&quot;, &quot;FOB&quot;, &quot;CIF&quot;,&quot;TIPO_UNIDAD_COMERCIAL&quot;, &quot;IVA&quot;)]
+base_ADVALOREM &lt;- aduana_muestra[, c(&quot;FLETE&quot;, &quot;FOB&quot;, &quot;CIF&quot;,&quot;REGIMEN&quot;, &quot;ADVALOREM&quot;)]
+base_ICE_ADVALOREM &lt;- aduana_muestra[, c(&quot;FLETE&quot;, &quot;FOB&quot;, &quot;CIF&quot;,&quot;REGIMEN&quot;, &quot;ICE_ADVALOREM&quot;)]
+base_FODINFA &lt;- aduana_muestra[, c(&quot;FLETE&quot;, &quot;FOB&quot;, &quot;CIF&quot;,&quot;PESO_NETO&quot;, &quot;FODINFA&quot;)]
+
+#División en entrenamiento (70%) y prueba (30%)
+
+n_m &lt;- nrow(aduana_muestra)
+idx_entrenamiento &lt;- sample(seq_len(n_m), size = floor(0.7 * n_m))
+
+train_IVA &lt;- base_IVA[idx_entrenamiento, ]
+test_IVA &lt;- base_IVA[-idx_entrenamiento, ]
+
+train_ADVALOREM &lt;- base_ADVALOREM[idx_entrenamiento, ]
+test_ADVALOREM &lt;- base_ADVALOREM[-idx_entrenamiento, ]
+
+train_ICE_ADVALOREM &lt;- base_ICE_ADVALOREM[idx_entrenamiento, ]
+test_ICE_ADVALOREM &lt;- base_ICE_ADVALOREM[-idx_entrenamiento, ]
+
+train_FODINFA &lt;- base_FODINFA[idx_entrenamiento, ]
+test_FODINFA &lt;- base_FODINFA[-idx_entrenamiento, ]</code></pre>
+<p>A continuación se ajustan los modelos de Random Forest de regresión
+para cada una de las salidas consideradas en el estudio:</p>
+<pre class="r"><code>#Modelos Random Forest para cada salida
+
+modelo_IVA &lt;- randomForest(
+IVA ~ FLETE + FOB + CIF + TIPO_UNIDAD_COMERCIAL,
+data = train_IVA,
+ntree = 150,
+mtry = 2,
+importance = TRUE
+)
+
+modelo_ADVALOREM &lt;- randomForest(
+ADVALOREM ~ FLETE + FOB + CIF +REGIMEN,
+data = train_ADVALOREM,
+ntree = 150,
+mtry = 2,
+importance = TRUE
+)
+
+modelo_ICE_ADVALOREM &lt;- randomForest(
+ICE_ADVALOREM ~ FLETE + FOB + CIF +REGIMEN,
+data = train_ICE_ADVALOREM,
+ntree = 150,
+mtry = 2,
+importance = TRUE
+)
+
+modelo_FODINFA &lt;- randomForest(
+FODINFA ~ FLETE + FOB + CIF + PESO_NETO,
+data = train_FODINFA,
+ntree = 150,
+mtry = 2,
+importance = TRUE
+)</code></pre>
+<p>Con los modelos ajustados, se generan las predicciones sobre el
+conjunto de prueba y se calculan los indicadores de desempeño RMSE y
+<span class="math inline">\(R^2\)</span> para cada salida:</p>
+<pre class="r"><code># Predicciones sobre el conjunto de prueba
+
+pred_IVA           &lt;- predict(modelo_IVA, test_IVA)
+pred_ADVALOREM     &lt;- predict(modelo_ADVALOREM, test_ADVALOREM)
+pred_ICE_ADVALOREM &lt;- predict(modelo_ICE_ADVALOREM, test_ICE_ADVALOREM)
+pred_FODINFA       &lt;- predict(modelo_FODINFA, test_FODINFA)
+
+# Funciones para RMSE y R²
+
+rmse &lt;- function(real, pred) {
+sqrt(mean((real - pred)^2))
+}
+
+r2 &lt;- function(real, pred) {
+1 - sum((real - pred)^2) / sum((real - mean(real))^2)
+}
+
+# Cálculo de métricas para cada modelo
+
+resultados_modelos &lt;- data.frame(
+Salida = c(&quot;IVA&quot;, &quot;ADVALOREM&quot;, &quot;ICE_ADVALOREM&quot;, &quot;FODINFA&quot;),
+RMSE = c(
+rmse(test_IVA$IVA, pred_IVA),
+rmse(test_ADVALOREM$ADVALOREM, pred_ADVALOREM),
+rmse(test_ICE_ADVALOREM$ICE_ADVALOREM, pred_ICE_ADVALOREM),
+rmse(test_FODINFA$FODINFA, pred_FODINFA)
+),
+R2 = c(
+r2(test_IVA$IVA, pred_IVA),
+r2(test_ADVALOREM$ADVALOREM, pred_ADVALOREM),
+r2(test_ICE_ADVALOREM$ICE_ADVALOREM, pred_ICE_ADVALOREM),
+r2(test_FODINFA$FODINFA, pred_FODINFA)
+)
+)
+
+resultados_modelos</code></pre>
+<pre><code>##          Salida       RMSE         R2
+## 1           IVA 9393.91846  0.5195762
+## 2     ADVALOREM 9909.79338 -0.4860262
+## 3 ICE_ADVALOREM 3627.66566 -0.2783317
+## 4       FODINFA   71.77609  0.9856417</code></pre>
+<p>Los resultados obtenidos con el modelo Random Forest muestran un
+comportamiento diferenciado entre las variables de salida analizadas.
+Para el <strong>IVA</strong>, el coeficiente de determinación alcanzó un
+valor de <span class="math inline">\(R^2 = 0.5196\)</span>, lo que
+indica una capacidad predictiva moderada al incorporar las
+modificaciones realizadas al conjunto de datos. En el caso de
+<strong>ADVALOREM</strong> e <strong>ICE_ADVALOREM</strong>, los valores
+negativos de <span class="math inline">\(R^2\)</span> confirman que el
+modelo no logra capturar adecuadamente la variabilidad de estos
+tributos, dado que su cálculo depende principalmente de factores
+normativos y arancelarios. Por su parte, <strong>FODINFA</strong>
+presenta nuevamente un ajuste sobresaliente con un <span class="math inline">\(R^2 = 0.9856\)</span>, evidenciando una relación
+altamente determinística con las variables de entrada consideradas.</p>
+<ul>
+<li><strong>IVA</strong>:
+<ul>
+<li>Se obtuvo un <span class="math inline">\(R^2 = 0.5196\)</span>, lo
+que indica que el modelo explica aproximadamente el 52% de la
+variabilidad del impuesto.</li>
+<li>El valor de RMSE = 9393.92 refleja un error de predicción moderado
+en la escala original del tributo.</li>
+<li>Este resultado confirma que el IVA puede ser estimado parcialmente a
+partir de variables monetarias y logísticas, aunque sigue dependiendo de
+factores adicionales de carácter normativo.</li>
+</ul></li>
+<li><strong>ADVALOREM</strong>:
+<ul>
+<li>Se obtuvo un <span class="math inline">\(R^2 = -0.4860\)</span>, lo
+que indica que el modelo tiene un desempeño peor que el uso del valor
+promedio como estimador.</li>
+<li>El RMSE = 9909.79 evidencia errores elevados en la predicción.</li>
+<li>Esto confirma que el ADVALOREM está dominado por reglas arancelarias
+asociadas a la subpartida, el régimen y los convenios, las cuales no
+pueden ser capturadas adecuadamente por el modelo bajo este
+enfoque.</li>
+</ul></li>
+<li><strong>ICE_ADVALOREM</strong>:
+<ul>
+<li>El <span class="math inline">\(R^2 = -0.2783\)</span> muestra que el
+modelo no logra identificar un patrón estadístico útil para esta
+variable.</li>
+<li>El RMSE = 3627.67 sigue siendo elevado en relación con la magnitud
+del impuesto.</li>
+<li>Este comportamiento confirma que el ICE depende de criterios
+específicos de tipo de mercancía y normativa tributaria, más que de
+relaciones continuas entre variables monetarias.</li>
+</ul></li>
+<li><strong>FODINFA</strong>:
+<ul>
+<li>Se alcanzó un <span class="math inline">\(R^2 = 0.9856\)</span>, lo
+que representa un ajuste excelente entre los valores reales y los
+predichos.</li>
+<li>El RMSE = 71.78 es bajo en relación con la magnitud típica del
+tributo.</li>
+<li>Este resultado confirma que el FODINFA mantiene una relac</li>
+</ul></li>
+</ul>
 </div>
 </div>
 
