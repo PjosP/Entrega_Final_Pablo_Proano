@@ -247,7 +247,7 @@ De manera general, se puede concluir que las variables de entrada **`FLETE`, `FO
 
 ## Resultados del Análisis Multivariable
 
-Como resultado del estudio, se analizó el impacto de las variables de entrada sobre las salidas del modelo, identificando aquellas con mayor relevancia para la predicción de los tributos. De esta forma, se pasó de considerar inicialmente **13 variables de entrada** a trabajar únicamente con **3 variables principales** (`FLETE`, `FOB` y `CIF`).
+Como resultado del estudio, se analizó el impacto de las variables de entrada sobre las salidas del modelo, identificando aquellas con mayor relevancia para la predicción de los tributos. De esta forma, se pasó de considerar inicialmente **13 variables de entrada** a trabajar únicamente con **4 variables principales**.
 
 En la siguiente etapa se generarán **cuatro conjuntos de datos**, uno para cada variable de salida, en los cuales las tres primeras columnas corresponderán a las variables de entrada seleccionadas y la última columna a la salida específica de cada modelo.
 
@@ -405,7 +405,7 @@ resultados_modelos
 
 
 ```
-Los resultados obtenidos con el modelo Random Forest muestran un comportamiento diferenciado entre las variables de salida analizadas. Para el **IVA**, el coeficiente de determinación alcanzó un valor de \(R^2 = 0.5196\), lo que indica una capacidad predictiva moderada al incorporar las modificaciones realizadas al conjunto de datos. En el caso de **ADVALOREM** e **ICE\_ADVALOREM**, los valores negativos de \(R^2\) confirman que el modelo no logra capturar adecuadamente la variabilidad de estos tributos, dado que su cálculo depende principalmente de factores normativos y arancelarios. Por su parte, **FODINFA** presenta nuevamente un ajuste sobresaliente con un \(R^2 = 0.9856\), evidenciando una relación altamente determinística con las variables de entrada consideradas.
+Los resultados obtenidos con el modelo Random Forest muestran un comportamiento diferenciado entre las variables de salida analizadas. Para el **IVA**, el coeficiente de determinación alcanzó un valor de \(R^2 = 0.5196\), lo que indica una capacidad predictiva moderada. En el caso de **ADVALOREM** e **ICE\_ADVALOREM**, los valores negativos de \(R^2\) confirman que el modelo no logra capturar adecuadamente la variabilidad de estos tributos, dado que su cálculo depende principalmente de factores normativos y arancelarios. Por su parte, **FODINFA** presenta nuevamente un ajuste sobresaliente con un \(R^2 = 0.9856\), evidenciando una relación altamente determinística con las variables de entrada consideradas.
 
 - **IVA**:
   - Se obtuvo un \(R^2 = 0.5196\), lo que indica que el modelo explica aproximadamente el 52% de la variabilidad del impuesto.
@@ -425,5 +425,33 @@ Los resultados obtenidos con el modelo Random Forest muestran un comportamiento 
 - **FODINFA**:
   - Se alcanzó un \(R^2 = 0.9856\), lo que representa un ajuste excelente entre los valores reales y los predichos.
   - El RMSE = 71.78 es bajo en relación con la magnitud típica del tributo.
-  - Este resultado confirma que el FODINFA mantiene una relac
+  - Este resultado confirma que el FODINFA mantiene una relación directa, estable y altamente predecible con las variables de entrada consideradas.
+
+
+```{r}
+plot(test_IVA$IVA, pred_IVA,
+     main = "Predicción vs Valor Real del IVA",
+     xlab = "IVA Real",
+     ylab = "IVA Predicho",
+     pch = 16,
+     col = rgb(0, 0, 1, 0.4))
+
+# Recta ideal y = x
+abline(a = 0, b = 1, col = "red", lwd = 2)
+
+```
+
+
+```{r}
+plot(test_FODINFA$FODINFA, pred_FODINFA,
+     main = "Predicción vs Valor Real del FODINFA",
+     xlab = "FODINFA Real",
+     ylab = "FODINFA Predicho",
+     pch = 16,
+     col = rgb(0, 0.6, 0, 0.4))
+
+# Recta ideal y = x
+abline(a = 0, b = 1, col = "red", lwd = 2)
+
+```
 
