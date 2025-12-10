@@ -11,54 +11,66 @@ output:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-# **PROYECTO FINAL**
-# Analítica de Datos Industriales para la Toma de Decisiones con Apoyo de AI (Curso ADI&TD-IA) 
+## Analítica de Datos Industriales para la Toma de Decisiones con Apoyo de AI (Curso ADI&TD-IA) 
+## **PROYECTO FINAL**
 
-## Datos del Estudiante:
-**Nombre:** Pablo Proaño
+### Datos del Estudiante:
+**Nombre:** Pablo Andrés Proaño Chamorro
 
 **mail:** pablo.proano@epn.edu.ec
 
-**Telf:** +593 98 244 0935
+**Carrera:** Doctorado en Ingeniería Industrial
+
+# Introducción
 
 ## Descripción del Proyecto
 
-El presente proyecto tiene como objetivo analizar un conjunto de datos correspondiente a operaciones de importación registradas por el Servicio Nacional de Aduana del Ecuador (SENAE), específicamente del conjunto denominado SENAE_Importaciones Régimen General, el cual contiene el detalle de las importaciones por fecha de ingreso de la Declaración Aduanera de Importación (DAI) con estado de salida autorizada. La base de datos, disponible en formato CSV y actualizada a diciembre de 2025, es utilizada para realizar procesos de carga, limpieza, descripción estadística y visualización de variables relacionadas con valor, peso, cantidades e impuestos.
+El presente proyecto tiene como objetivo analizar un conjunto de datos correspondiente a operaciones de importación registradas por el Servicio Nacional de Aduana del Ecuador (SENAE), específicamente del conjunto SENAE_Importaciones Régimen General, el cual contiene el detalle de las importaciones por fecha de ingreso de la Declaración Aduanera de Importación (DAI) con estado de salida autorizada. La base de datos, disponible en formato CSV y actualizada a diciembre de 2025, es utilizada para procesos de carga, depuración, análisis estadístico, visualización y modelado predictivo de variables relacionadas con valores comerciales, cantidades e impuestos.
 
-## Descripción de la Base  de Datos
+## Descripción de la Base de Datos
 
-La base de datos utilizada en este proyecto corresponde al conjunto SENAE_Importaciones Régimen General, publicado por el Servicio Nacional de Aduana del Ecuador (SENAE), y contiene información detallada de las operaciones de importación registradas mediante la Declaración Aduanera de Importación (DAI) con estado de salida autorizada. El conjunto de datos se presenta en formato CSV y está compuesto por variables de tipo categórico y numérico. 
+La base de datos utilizada corresponde al conjunto SENAE_Importaciones Régimen General, publicado por el SENAE, y contiene información detallada de las operaciones de importación registradas mediante la DAI. El conjunto se presenta en formato CSV y está compuesto por variables categóricas y numéricas asociadas al régimen, subpartida, país de origen, peso, valores comerciales, cantidades e impuestos, lo que permite un análisis integral de los aspectos comerciales y tributarios de las operaciones.
 
 ## Objetivo del Proyecto
 
-Para el desarrollo del proyecto se consideran como **variables de entrada** aquellas asociadas a la información conocida al arribo de la mercancía a Aduana, tales como SUBPARTIDA, PAIS_ORIGEN, REGIMEN, PESO_NETO, FOB, FLETE, SEGURO, CANTIDAD_FISICA y CANTIDAD_COMERCIAL. **Como variables de salida** se definen los principales tributos calculados por la autoridad aduanera, entre ellos ADVALOREM, ICE, FODINFA, SALVAGUARDIA e IVA. Si bien estos valores se determinan mediante ecuaciones, formulas , tablas arancelarias y normativa específica, el objetivo del proyecto es **desarrollar un modelo basado en datos** que permita estimar dichos tributos aun sin conocer explícitamente estas ecuaciones, utilizando únicamente la información histórica contenida en la base de datos. 
+Para el desarrollo del proyecto se consideran como **variables de entrada** aquellas asociadas a la información conocida al arribo de la mercancía a Aduana, tales como REGIMEN, SUBPARTIDA, PAIS_ORIGEN, CONVENIO_INTERNACIONAL, PESO_NETO, CANTIDAD_FISICA, CANTIDAD_COMERCIAL, TIPO_UNIDAD_FISICA, TIPO_UNIDAD_COMERCIAL, FOB, FLETE, SEGURO y CIF. Como **variables de salida** se definen los principales tributos: IVA, ADVALOREM y FODINFA.
+
+Si bien estos valores se determinan mediante normativa, tablas arancelarias y fórmulas específicas, el objetivo del proyecto es desarrollar modelos predictivos basados en datos que permitan estimar dichos tributos utilizando únicamente la información histórica disponible, sin requerir el conocimiento explícito de las ecuaciones de cálculo.
+
+# Base de Datos
 
 ## Carga y tratamiento de Datos
-En esta sección cargamos los datos de la base que conseguimos para este trabajo.
+La base de datos utilizada fue descargada desde la página web previamente descrita en formato CSV. Posteriormente, fue cargada dentro del presente proyecto y almacenada en el repositorio de GitHub con el fin de garantizar la reproducibilidad del análisis. A continuación, se procede a la carga de los datos en el entorno de trabajo:
+
 ```{r}
 library(readr)
 aduana  <- read_delim("https://raw.githubusercontent.com/PjosP/Entrega_Final_Pablo_Proano/refs/heads/main/base_aduana_10.csv", 
     delim = "|", escape_double = FALSE, trim_ws = TRUE)
 head(aduana)
 ```
+## Descripción de la Base de Datos
 
-Vamos a revisar las dimensiones de la base de datos:
+A continuación, se procede a revisar las dimensiones de la base de datos, con el objetivo de identificar el número total de observaciones (filas) y variables (columnas) disponibles para el análisis. Esta verificación inicial permite evaluar el tamaño del conjunto de datos y confirmar que la carga de la información se haya realizado correctamente.
+
 ```{r}
 dim(aduana)
 ```
-Vamos a ver de que tipo son los campos de la base de datos:
+
+A continuación, se procede a identificar el tipo de dato de cada una de las variables de la base de datos, con el fin de verificar su correcta interpretación (numérica, categórica o de fecha) y asegurar su adecuado tratamiento en las etapas posteriores de análisis y modelado.
+
 ```{r}
 sapply(aduana, class)
 ```
-# Tratamiento Inicial del Datos
-Vamos a revisar si existen elementos en blanco o elementos duplicados:
+
+## Tratamiento Inicial de los Datos
+
+En esta etapa se verifica la calidad inicial de la información, evaluando la existencia de **valores faltantes (NA)** y **filas duplicadas**, con el objetivo de garantizar la consistencia del conjunto de datos antes de aplicar los procesos de análisis y modelado.
+
 ```{r}
 anyNA(aduana)
 anyDuplicated(aduana)
 ```
-Podemos ver que no hay celdas en blanco ni duplicadas.
-
-La base de datos tiene algunas columnas que no son relevantes para nuestro estudio, por lo que vamos a crear una nueva base solo con las columnas que por ahora pensamos que son relevantes y lo vamos a almacenar en una base de datos que se llame **base_seleccionada**:
+Se verificó que la base de datos no presenta valores faltantes ni registros duplicados, por lo que no fue necesario aplicar procesos de imputación o depuplicación. Sin embargo, se identificaron algunas columnas que no resultan relevantes para los objetivos del presente estudio. En consecuencia, se procede a crear una nueva base de datos que contenga únicamente las variables consideradas pertinentes para el análisis, la cual se denominará **base_seleccionada**:
 
 ```{r}
 # Definimos las variables de entrada
@@ -71,8 +83,7 @@ vars_entrada <- c(
 
 # Definimos las variables de salida
 vars_salida <- c(
-  "ADVALOREM","ICE_ADVALOREM",
-  "FODINFA", "IVA"
+  "ADVALOREM",   "FODINFA", "IVA"
 )
 
 # Unimos las variables seleccionadas
@@ -85,103 +96,21 @@ base_seleccionada <- aduana[, vars_seleccionadas]
 dim(base_seleccionada)
 ```
 
-Vamos a realizar gráficos de cajas y bigotes para ver como se distribuyen los datos de las salidas y si existen atípicos.
+# Análisis Multivariante
 
-```{r}
-boxplot(
-  base_seleccionada[, c("IVA", "ADVALOREM", "ICE_ADVALOREM", "FODINFA")],
-  main = "Diagrama de Cajas de las Variables de Salida",
-  ylab = "Valor del tributo",
-  col = c("lightblue", "lightgreen", "lightpink", "lightgray"),
-  border = "black",
-  las = 1   # etiquetas horizontales
-)
+## Análisis Relacional de Datos
 
+Con el fin de evaluar la viabilidad del proyecto, se procede a calcular la **matriz de covarianzas**, la cual permite analizar el grado de relación existente entre las variables y determinar si es posible establecer modelos predictivos en los que unas variables puedan ser estimadas en función de otras.
 
-```
-El diagrama de cajas de las variables de salida evidencia una alta asimetría y una gran presencia de valores atípicos.
+Previo a este análisis, se realiza la ransformación de las variables categóricas a formato numérico, con el objetivo de permitir el cálculo de medidas estadísticas multivariantes. Los resultados de esta transformación se almacenan en una nueva base de datos denominada **`base_numerica`**.
 
-Esto podría impactar negativamente en nuestro estudio, por lo que vamos a proceder a eliminar esos datos atípicos.
-
-```{r}
-# Función para eliminar atípicos usando IQR
-eliminar_outliers_IQR <- function(x) {
-  Q1 <- quantile(x, 0.25, na.rm = TRUE)
-  Q3 <- quantile(x, 0.75, na.rm = TRUE)
-  IQR_val <- Q3 - Q1
-  limite_inf <- Q1 - 1.5 * IQR_val
-  limite_sup <- Q3 + 1.5 * IQR_val
-  x >= limite_inf & x <= limite_sup
-}
-
-filtro_IVA  <- eliminar_outliers_IQR(base_seleccionada$IVA)
-filtro_ADV  <- eliminar_outliers_IQR(base_seleccionada$ADVALOREM)
-filtro_ICE  <- eliminar_outliers_IQR(base_seleccionada$ICE_ADVALOREM)
-filtro_FOD  <- eliminar_outliers_IQR(base_seleccionada$FODINFA)
-
-filtro_total <- filtro_IVA & filtro_ADV & filtro_ICE & filtro_FOD
-
-base_seleccionada_sin_outliers <- base_seleccionada[filtro_total, ]
-
-dim(aduana)
-dim(base_seleccionada_sin_outliers)
-
-
-```
-Para ver como la función anterior impacto a nuestra base de datos, vamos a volver a obtener el diagrama de cajas:
-
-
-```{r}
-boxplot(
-  base_seleccionada_sin_outliers[, c("IVA", "ADVALOREM", "ICE_ADVALOREM", "FODINFA")],
-  main = "Diagrama de Cajas de las Variables de Salida",
-  ylab = "Valor del tributo",
-  col = c("lightblue", "lightgreen", "lightpink", "lightgray"),
-  border = "black",
-  las = 1   # etiquetas horizontales
-)
-
-
-```
-**Nota:** Después de la eliminación de Atípicos, la salida de mi estudio `ICCE_ADVALOREN` tienen toda una columna de ceros, por lo que la voy a eliminar de mi estudio.
-
-```{r}
-# Definimos las variables de entrada
-vars_entrada <- c(
-  "REGIMEN", "SUBPARTIDA", "PAIS_ORIGEN", "CONVENIO_INTERNACIONAL",
-  "PESO_NETO", "CANTIDAD_FISICA", "CANTIDAD_COMERCIAL",
-  "TIPO_UNIDAD_FISICA", "TIPO_UNIDAD_COMERCIAL",
-  "FOB", "FLETE", "SEGURO", "CIF"
-)
-
-# Definimos las variables de salida
-vars_salida <- c(
-  "ADVALOREM",
-  "FODINFA", "IVA"
-)
-
-# Unimos las variables seleccionadas
-vars_seleccionadas <- c(vars_entrada, vars_salida)
-
-# Creamos la nueva base de datos
-nueva_base_seleccionada <- base_seleccionada_sin_outliers[, vars_seleccionadas]
-
-# Verificación básica
-dim(nueva_base_seleccionada)
-```
-
-## Analisis multivariante
-
-Para saber si nuestro proyecto es Viable, voy a obtener la matriz de covarianzas, para analizar si las variables están relacionadas y podría predecir unas en función de otras.
-
-Sin embargo, previo a esto voy a reemplazar las filas que tienen texto por números, y voy a almacenar los resultados en una variable llamada **base_numerica** 
 
 ```{r}
 # Se identificaron automáticamente las columnas que son de tipo carácter (texto)
-vars_char <- names(nueva_base_seleccionada)[sapply(nueva_base_seleccionada, is.character)]
+vars_char <- names(base_seleccionada)[sapply(base_seleccionada, is.character)]
 
 # Se creó una copia de la base original para trabajar con la versión numérica
-base_numerica <- nueva_base_seleccionada
+base_numerica <- base_seleccionada
 
 # Se transformaron las variables categóricas a valores numéricos mediante codificación de factores
 base_numerica[vars_char] <- lapply(base_numerica[vars_char], function(x) {
@@ -192,10 +121,13 @@ base_numerica[vars_char] <- lapply(base_numerica[vars_char], function(x) {
 sapply(base_numerica, class)
 
 ```
-**Nota:** Yo solía hacer esto a mano, investigando en Internet, vi que había dos formas automáticas de hacerlo, la primera usando el método de factores y la segunda usando el método "One-Hot Encoding", la primera sirve para modelos basados en árboles y métodos de clasificación que no dependen de relaciones lineales, como voy a usar random forest en mi proyecto decidí usar esa para no hacer mas grande la base. 
 
+**Nota:** Inicialmente, yo solía hacer esta transformación de variables categóricas a numéricas de forma manual en python usando una función propia. Posteriormente investigando para la realización de este proyecto, se identificaron dos métodos automáticos para este proceso: la **codificación mediante factores** y la **codificación One-Hot Encoding**. 
 
-Ahora voy a normalizar la base y la voy a guardar en una nueva base de datos llamada **base_normalizada**
+El primer método resulta adecuado para modelos basados en árboles y algoritmos que no dependen de relaciones lineales entre variables. Dado que en este proyecto se emplea **Random Forest**, se optó por la codificación mediante factores, evitando además un incremento innecesario en la dimensionalidad de la base de datos.
+
+Posteriormente, se procede a la normalización de la base de datos, con el objetivo de homogeneizar la escala de las variables numéricas. El resultado de este proceso se almacena en una nueva base de datos denominada **`base_normalizada`**.
+
 ```{r}
 # Función de normalización Min-Max
 normalizar_minmax <- function(x) {
@@ -209,12 +141,9 @@ base_normalizada <- as.data.frame(
 
 # Verificación
 summary(base_normalizada)
-
-
 ```
 
-
-Ahora voy a calcular la matriz de covarianzas a partir de la base de datos normalizada, con el fin de analizar el grado de variación conjunta entre las variables de entrada y salida, y evaluar su relación estadística previa a la construcción del modelo.
+A continuación, se procede al cálculo de la **matriz de covarianzas** a partir de la base de datos normalizada, con el propósito de analizar el grado de variación conjunta entre las variables de entrada y salida, y evaluar su relación estadística como etapa previa a la construcción de los modelos predictivos.
 
 ```{r}
 # Se calculó la matriz de covarianzas de la base de datos normalizada
@@ -225,7 +154,7 @@ matriz_covarianzas
 
 ```
 
-Esta matriz, me suele parecer un poco confusa, por lo que personalmente uso la matriz de correlaciones:
+La matriz de covarianzas me parece un poco intuitiva para la interpretación directa debido a la influencia de la escala de las variables, por eso se decidió usar de manera complementaria la **matriz de correlaciones**, la cual permite una interpretación más clara de la intensidad y el sentido de la relación entre las variables.
 
 ```{r}
 # Se calculó la matriz de covarianzas de la base de datos normalizada
@@ -235,9 +164,8 @@ matriz_correlacion <- cor(base_normalizada)
 matriz_correlacion
 ```
 
+La matriz de correlaciones se representa mediante un **mapa de calor**, con el objetivo de analizar de forma visual la intensidad y el signo de la relación entre las variables de entrada y salida. Esta representación gráfica permite identificar de manera clara dependencias fuertes, relaciones débiles y correlaciones inversas entre variables, facilitando la interpretación del comportamiento multivariante previo al proceso de modelado.
 
-
-Voy a representar la matriz de correlaciones usando un mapa de calor, para analizar de forma visual la intensidad y el signo de la relación entre las variables de entrada y salida. Este gráfico facilitó la identificación de dependencias fuertes, débiles y relaciones inversas entre variables.
 ```{r}
 library(corrplot)
 # Se generó el gráfico de correlación
@@ -246,11 +174,12 @@ corrplot(matriz_correlacion, method = "color", type = "upper")
 
 **Nota:** Tuve que instalar la librería "corrplot"
 
-Para ver los resultados por separado, voy a generar gráficos de barras para cada una de las salidas, quiero ver cuales de las variables de entrada tienen mayor impacto en las salidas.
+Con el objetivo de analizar los resultados de forma individual, se generan gráficos de barras de las correlaciones para cada una de las variables de salida, con el fin de identificar cuáles de las variables de entrada presentan un mayor impacto en cada tributo. 
 
-Esto lo hago por que no un gran numero de variables de entrada y no quiero usarlas todas, solo las 4 mas relevantes.
+Este procedimiento se realiza debido a que se dispone de un número considerable de variables de entrada y no se desea utilizarlas en su totalidad, sino únicamente seleccionar las **cuatro más relevantes** para la construcción de los modelos predictivos.
 
 **Para el IVA:**
+
 ```{r}
 # Se extrajo la correlación de IVA con todas las variables de entrada
 cor_iva <- matriz_correlacion[vars_entrada, "IVA"]
@@ -266,6 +195,7 @@ barplot(cor_iva,
 
 
 **Para el FODINFA:**
+
 ```{r}
 cor_FODINFA <- matriz_correlacion[vars_entrada, "FODINFA"]
 
@@ -280,6 +210,7 @@ barplot(cor_FODINFA,
 
 
 **Para el ADVALOREM:**
+
 ```{r}
 cor_ADVALOREM <- matriz_correlacion[vars_entrada, "ADVALOREM"]
 
@@ -291,7 +222,8 @@ barplot(cor_ADVALOREM,
         xlab = "Variables de entrada")
 
 ```
-## Resultados
+
+## Resumen de los Resultados Obtenidos
 
 A partir del análisis de correlación se observa que, para la salida **IVA**, las variables de entrada con mayor impacto son:
 
@@ -316,7 +248,7 @@ Finalmente, para las salidas **ADVALOREM**, las variables de entrada más releva
 
 De manera general, se puede concluir que las variables de entrada **`FLETE`, `FOB` y `CIF`** presentan el mayor impacto sobre todas las salidas analizadas, mientras que una cuarta variable (como `TIPO_UNIDAD_COMERCIAL`, `PESO_NETO` o `REGIMEN`) aporta información adicional específica dependiendo de cada tributo.
 
-## Resultados del Análisis Multivariable
+## Resultados del Análisis de Relacional
 
 Como resultado del estudio, se analizó el impacto de las variables de entrada sobre las salidas del modelo, identificando aquellas con mayor relevancia para la predicción de los tributos. De esta forma, se pasó de considerar inicialmente **13 variables de entrada** a trabajar únicamente con **4 variables principales**.
 
@@ -327,9 +259,9 @@ En la siguiente etapa se generarán **cuatro conjuntos de datos**, uno para cada
 # usando como variables de entrada FLETE, FOB y CIF
 # y como variable de salida el tributo correspondiente
 
-base_IVA <- aduana[, c("FLETE", "FOB", "CIF","TIPO_UNIDAD_COMERCIAL", "IVA")]
-base_ADVALOREM <- aduana[, c("FLETE", "FOB", "CIF", "ADVALOREM")]
-base_FODINFA <- aduana[, c("FLETE", "FOB", "CIF", "FODINFA")]
+base_IVA <- base_normalizada[, c("FLETE", "FOB", "CIF","TIPO_UNIDAD_COMERCIAL", "IVA")]
+base_ADVALOREM <- base_normalizada[, c("FLETE", "FOB", "CIF","REGIMEN", "ADVALOREM")]
+base_FODINFA <- base_normalizada[, c("FLETE", "FOB", "CIF","PESO_NETO", "FODINFA")]
 
 # Verificación rápida de las cuatro bases creadas
 list(
@@ -340,7 +272,8 @@ list(
 
 
 ```
-## Modelo Random Forest
+
+# Algoritmo de Regresión **Random Forest**
 
 Con el fin de modelar la relación no lineal entre las variables de entrada (`FLETE`, `FOB` y `CIF`) y los tributos aduaneros de salida (`IVA`, `ADVALOREM`, `ICE_ADVALOREM` y `FODINFA`), se emplea el algoritmo **Random Forest de regresión**. Este método basado en ensambles de árboles de decisión permite capturar interacciones complejas entre las variables, reducir la varianza del modelo y mejorar la capacidad de generalización, siendo especialmente adecuado para conjuntos de datos con relaciones no lineales y posible multicolinealidad entre las variables de entrada.
 
@@ -353,16 +286,18 @@ library(randomForest)
 set.seed(123)
 ```
 
-Mi idea inicial fue utilizar el 75% de los datos para entrenar el modelo y el 25% restante para validarlo. Sin embargo, la base de datos original contiene **133 493** filas y, al aplicar el modelo de Random Forest sobre todo el conjunto, se presentaba un cuello de botella computacional que podía superar los 20 minutos de ejecución.
+## Selección de la Muestra
+
+La idea inicial era utilizar el 75% de los datos para entrenar el modelo y el 25% restante para validarlo. Sin embargo, la base de datos original contiene **133 493** filas y, al aplicar el modelo de Random Forest sobre todo el conjunto, se presentaba un cuello de botella computacional que podía superar los 20 minutos de ejecución.
 
 Por este motivo, se decidió trabajar con una **muestra aleatoria del 10%** de la base original, equivalente a **13 400 filas**, que se considera representativa para los fines de este trabajo. Sobre esta muestra se utiliza el **70% de los datos para el entrenamiento** de los modelos y el **30% restante para la validación**.
 
 
 ```{r}
-n_total <- nrow(base_numerica)
+n_total <- nrow(base_normalizada)
 tam_muestra <- min(13400, n_total)
 idx_muestra <- sample(seq_len(n_total), size = tam_muestra)
-aduana_muestra <- base_numerica[idx_muestra, ]
+aduana_muestra <- base_normalizada[idx_muestra, ]
 dim(aduana_muestra)
 ```
 
@@ -389,8 +324,9 @@ train_FODINFA <- base_FODINFA[idx_entrenamiento, ]
 test_FODINFA <- base_FODINFA[-idx_entrenamiento, ]
 
 ```
+## Modelos de Random Forest de regresión
 
-A continuación se ajustan los modelos de Random Forest de regresión para cada una de las salidas consideradas en el estudio:
+A continuación, se procede al ajuste de los modelos de Random Forest de regresión para cada una de las variables de salida consideradas en el estudio, utilizando las variables de entrada previamente seleccionadas.
 
 ```{r}
 #Modelos Random Forest para cada salida
@@ -419,6 +355,8 @@ mtry = 2,
 importance = TRUE
 )
 ```
+
+## Resultados del Modelo Random Forest
 
 Con los modelos ajustados, se generan las predicciones sobre el conjunto de prueba y se calculan los indicadores de desempeño RMSE y \(R^2\) para cada salida:
 
@@ -459,48 +397,252 @@ resultados_modelos
 
 
 ```
-Los resultados obtenidos con el modelo Random Forest muestran un comportamiento diferenciado entre las variables de salida analizadas. Para el **IVA**, el coeficiente de determinación alcanzó un valor de \(R^2 = 0.5196\), lo que indica una capacidad predictiva moderada. En el caso de **ADVALOREM** e **ICE\_ADVALOREM**, los valores negativos de \(R^2\) confirman que el modelo no logra capturar adecuadamente la variabilidad de estos tributos, dado que su cálculo depende principalmente de factores normativos y arancelarios. Por su parte, **FODINFA** presenta nuevamente un ajuste sobresaliente con un \(R^2 = 0.9856\), evidenciando una relación altamente determinística con las variables de entrada consideradas.
 
-- **IVA**:
-  - Se obtuvo un \(R^2 = 0.5196\), lo que indica que el modelo explica aproximadamente el 52% de la variabilidad del impuesto.
-  - El valor de RMSE = 9393.92 refleja un error de predicción moderado en la escala original del tributo.
-  - Este resultado confirma que el IVA puede ser estimado parcialmente a partir de variables monetarias y logísticas, aunque sigue dependiendo de factores adicionales de carácter normativo.
-
-- **ADVALOREM**:
-  - Se obtuvo un \(R^2 = -0.4860\), lo que indica que el modelo tiene un desempeño peor que el uso del valor promedio como estimador.
-  - El RMSE = 9909.79 evidencia errores elevados en la predicción.
-  - Esto confirma que el ADVALOREM está dominado por reglas arancelarias asociadas a la subpartida, el régimen y los convenios, las cuales no pueden ser capturadas adecuadamente por el modelo bajo este enfoque.
-
-- **FODINFA**:
-  - Se alcanzó un \(R^2 = 0.9856\), lo que representa un ajuste excelente entre los valores reales y los predichos.
-  - El RMSE = 71.78 es bajo en relación con la magnitud típica del tributo.
-  - Este resultado confirma que el FODINFA mantiene una relación directa, estable y altamente predecible con las variables de entrada consideradas.
-
+Se obtuvieron resultados de predicción muy satisfactorios para `FODINFA`, un desempeño moderado para `IVA` y un desempeño bajo para `ADVALOREM`. Con el fin de analizar estos resultados de manera visual y comparativa, a continuación se presentan los gráficos de predicción versus valor real para cada una de las salidas consideradas.
 
 ```{r}
+# Configuración para 3 gráficos en una sola fila
+par(mfrow = c(1, 3))
+
+# === IVA ===
 plot(test_IVA$IVA, pred_IVA,
-     main = "Predicción vs Valor Real del IVA",
+     main = "IVA",
      xlab = "IVA Real",
      ylab = "IVA Predicho",
      pch = 16,
      col = rgb(0, 0, 1, 0.4))
-
-# Recta ideal y = x
 abline(a = 0, b = 1, col = "red", lwd = 2)
 
-```
-
-
-```{r}
+# === FODINFA ===
 plot(test_FODINFA$FODINFA, pred_FODINFA,
-     main = "Predicción vs Valor Real del FODINFA",
+     main = "FODINFA",
      xlab = "FODINFA Real",
      ylab = "FODINFA Predicho",
      pch = 16,
      col = rgb(0, 0.6, 0, 0.4))
-
-# Recta ideal y = x
 abline(a = 0, b = 1, col = "red", lwd = 2)
+
+# === ADVALOREM ===
+plot(test_ADVALOREM$ADVALOREM, pred_ADVALOREM,
+     main = "ADVALOREM",
+     xlab = "ADVALOREM Real",
+     ylab = "ADVALOREM Predicho",
+     pch = 16,
+     col = rgb(0.6, 0, 0.6, 0.4))
+abline(a = 0, b = 1, col = "red", lwd = 2)
+
+# Restaurar configuración gráfica por defecto
+par(mfrow = c(1, 1))
+
+```
+A partir del análisis gráfico anterior, se identifica la posible presencia de valores atípicos en los datos. 
+
+## Eliminación de Atípicos
+
+Con el fin de evaluar de manera más rigurosa la distribución de las variables de salida y confirmar la existencia de dichos valores extremos, se procede a generar diagramas de cajas y bigotes (boxplots), los cuales permiten visualizar la dispersión, la mediana y los posibles outliers de cada tributo.
+
+```{r}
+boxplot(
+  base_normalizada[, c("IVA", "ADVALOREM", "FODINFA")],
+  main = "Diagrama de Cajas de las Variables de Salida",
+  ylab = "Valor del tributo",
+  col = c("lightblue", "lightgreen", "lightpink", "lightgray"),
+  border = "black",
+  las = 1   # etiquetas horizontales
+)
+
+
+```
+El diagrama de cajas de las variables de salida evidencia una distribución altamente asimétrica y una presencia significativa de valores atípicos. Este comportamiento puede haber impactado negativamente en el desempeño de los modelos predictivos. En consecuencia, se procede a aplicar un proceso de eliminación de datos atípicos, con el fin de mejorar la calidad de la información y la estabilidad de los modelos.
+
+```{r}
+# Función para eliminar atípicos usando IQR
+eliminar_outliers_IQR <- function(x) {
+  Q1 <- quantile(x, 0.25, na.rm = TRUE)
+  Q3 <- quantile(x, 0.75, na.rm = TRUE)
+  IQR_val <- Q3 - Q1
+  limite_inf <- Q1 - 1.5 * IQR_val
+  limite_sup <- Q3 + 1.5 * IQR_val
+  x >= limite_inf & x <= limite_sup
+}
+
+filtro_IVA  <- eliminar_outliers_IQR(base_numerica$IVA)
+filtro_ADV  <- eliminar_outliers_IQR(base_numerica$ADVALOREM)
+filtro_FOD  <- eliminar_outliers_IQR(base_numerica$FODINFA)
+
+filtro_total <- filtro_IVA & filtro_ADV & filtro_FOD
+base_seleccionada_sin_outliers <- base_normalizada[filtro_total, ]
+
+dim(base_normalizada)
+dim(base_seleccionada_sin_outliers)
+
+
+```
+Con el fin de evaluar el impacto del proceso de eliminación de valores atípicos sobre la base de datos, se procede a generar nuevamente el diagrama de cajas, con el objetivo de comparar la distribución de las variables de salida antes y después del tratamiento aplicado.
+
+```{r}
+boxplot(
+  base_seleccionada_sin_outliers[, c("IVA", "ADVALOREM", "FODINFA")],
+  main = "Diagrama de Cajas de las Variables de Salida",
+  ylab = "Valor del tributo",
+  col = c("lightblue", "lightgreen", "lightpink", "lightgray"),
+  border = "black",
+  las = 1   # etiquetas horizontales
+)
+
 
 ```
 
+El nuevo diagrama de cajas obtenido muestra que una parte significativa de los valores atípicos ha sido eliminada de la base de datos. No obstante, aún se conservan algunos valores que se encuentran fuera de los límites de la caja, los cuales corresponden a comportamientos propios y característicos del conjunto de datos, asociados a operaciones de importación de magnitud excepcional.
+
+## Algoritmo Randon Forest sobre la Base Depurada
+
+A continuación, se repite el procedimiento de modelado utilizando la base de datos sin valores atípicos, con el objetivo de evaluar si este tratamiento permite mejorar el desempeño y la capacidad predictiva de los modelos.
+
+```{r}
+n_total <- nrow(base_seleccionada_sin_outliers)
+tam_muestra <- min(13400, n_total)
+idx_muestra <- sample(seq_len(n_total), size = tam_muestra)
+aduana_muestra <- base_seleccionada_sin_outliers[idx_muestra, ]
+#Bases específicas por salida, construidas a partir de la muestra
+base_IVA <- aduana_muestra[, c("FLETE", "FOB", "CIF","TIPO_UNIDAD_COMERCIAL", "IVA")]
+base_ADVALOREM <- aduana_muestra[, c("FLETE", "FOB", "CIF","REGIMEN", "ADVALOREM")]
+base_FODINFA <- aduana_muestra[, c("FLETE", "FOB", "CIF","PESO_NETO", "FODINFA")]
+
+#División en entrenamiento (70%) y prueba (30%)
+
+n_m <- nrow(aduana_muestra)
+idx_entrenamiento <- sample(seq_len(n_m), size = floor(0.7 * n_m))
+
+train_IVA <- base_IVA[idx_entrenamiento, ]
+test_IVA <- base_IVA[-idx_entrenamiento, ]
+
+train_ADVALOREM <- base_ADVALOREM[idx_entrenamiento, ]
+test_ADVALOREM <- base_ADVALOREM[-idx_entrenamiento, ]
+
+train_FODINFA <- base_FODINFA[idx_entrenamiento, ]
+test_FODINFA <- base_FODINFA[-idx_entrenamiento, ]
+modelo_IVA <- randomForest(
+IVA ~ FLETE + FOB + CIF + TIPO_UNIDAD_COMERCIAL,
+data = train_IVA,
+ntree = 150,
+mtry = 2,
+importance = TRUE
+)
+
+modelo_ADVALOREM <- randomForest(
+ADVALOREM ~ FLETE + FOB + CIF +REGIMEN,
+data = train_ADVALOREM,
+ntree = 150,
+mtry = 2,
+importance = TRUE
+)
+
+modelo_FODINFA <- randomForest(
+FODINFA ~ FLETE + FOB + CIF + PESO_NETO,
+data = train_FODINFA,
+ntree = 150,
+mtry = 2,
+importance = TRUE
+)
+
+# Predicciones sobre el conjunto de prueba
+
+pred_IVA           <- predict(modelo_IVA, test_IVA)
+pred_ADVALOREM     <- predict(modelo_ADVALOREM, test_ADVALOREM)
+pred_FODINFA       <- predict(modelo_FODINFA, test_FODINFA)
+
+# Funciones para RMSE y R²
+
+rmse <- function(real, pred) {
+sqrt(mean((real - pred)^2))
+}
+
+r2 <- function(real, pred) {
+1 - sum((real - pred)^2) / sum((real - mean(real))^2)
+}
+
+# Cálculo de métricas para cada modelo
+
+resultados_modelos <- data.frame(
+Salida = c("IVA", "ADVALOREM", "FODINFA"),
+RMSE = c(
+rmse(test_IVA$IVA, pred_IVA),
+rmse(test_ADVALOREM$ADVALOREM, pred_ADVALOREM),
+rmse(test_FODINFA$FODINFA, pred_FODINFA)
+),
+R2 = c(
+r2(test_IVA$IVA, pred_IVA),
+r2(test_ADVALOREM$ADVALOREM, pred_ADVALOREM),
+r2(test_FODINFA$FODINFA, pred_FODINFA)
+)
+)
+
+resultados_modelos
+```
+
+Tras la eliminación de valores atípicos, se observa una mejora significativa en el desempeño de los modelos para las salidas `IVA` y `FODINFA`, evidenciada por el incremento del coeficiente de determinación \(R^2\) y la reducción del error RMSE.
+
+- **IVA:**  
+  Se obtuvo un \(R^2 = 0.84\), lo que indica que el modelo explica una proporción elevada de la variabilidad del tributo. El RMSE del orden de \(10^{-5}\) refleja una adecuada capacidad de predicción bajo el esquema de variables utilizadas.
+
+- **ADVALOREM:**  
+  El valor de \(R^2 = 0.06\) muestra un bajo poder explicativo del modelo, lo que sugiere que este tributo presenta una dependencia relevante de otras variables no incluidas en el análisis o una dinámica no lineal más compleja.
+
+- **FODINFA:**  
+  Se alcanzó un \(R^2 = 0.96\), indicando que el modelo explica casi en su totalidad la variabilidad de esta salida, con un error de predicción muy bajo.
+
+En términos generales, la eliminación de atípicos permitió estabilizar el comportamiento de los modelos y mejorar su capacidad predictiva, principalmente en las salidas `IVA` y `FODINFA`, mientras que `ADVALOREM` requiere un replanteamiento de las variables explicativas consideradas.
+
+
+Con el fin de evidenciar de manera gráfica los efectos del tratamiento de valores atípicos, se procede a generar nuevamente los gráficos de predicción versus valor real, permitiendo una comparación directa con los resultados obtenidos antes de la depuración de los datos.
+
+```{r}
+# Configuración para 3 gráficos en una sola fila
+par(mfrow = c(1, 3))
+
+# === IVA ===
+plot(test_IVA$IVA, pred_IVA,
+     main = "IVA",
+     xlab = "IVA Real",
+     ylab = "IVA Predicho",
+     pch = 16,
+     col = rgb(0, 0, 1, 0.4))
+abline(a = 0, b = 1, col = "red", lwd = 2)
+
+# === FODINFA ===
+plot(test_FODINFA$FODINFA, pred_FODINFA,
+     main = "FODINFA",
+     xlab = "FODINFA Real",
+     ylab = "FODINFA Predicho",
+     pch = 16,
+     col = rgb(0, 0.6, 0, 0.4))
+abline(a = 0, b = 1, col = "red", lwd = 2)
+
+# === ADVALOREM ===
+plot(test_ADVALOREM$ADVALOREM, pred_ADVALOREM,
+     main = "ADVALOREM",
+     xlab = "ADVALOREM Real",
+     ylab = "ADVALOREM Predicho",
+     pch = 16,
+     col = rgb(0.6, 0, 0.6, 0.4))
+abline(a = 0, b = 1, col = "red", lwd = 2)
+
+# Restaurar configuración gráfica por defecto
+par(mfrow = c(1, 1))
+
+```
+
+# Conclusiones Finales
+
+El estudio permitió demostrar la viabilidad del uso de modelos de machine learning para la estimación de tributos aduaneros a partir de información operativa disponible al arribo de la mercancía, empleando datos reales del SENAE y un enfoque estrictamente basado en analítica de datos.
+
+El análisis de correlación evidenció que las variables `FOB`, `FLETE` y `CIF` constituyen los principales factores explicativos de los tributos, lo cual justifica su selección como variables de entrada en los modelos predictivos. Variables adicionales como `TIPO_UNIDAD_COMERCIA`L, `PESO_NETO` y `REGIMEN` aportan información específica dependiendo del tributo analizado.
+
+La aplicación del método de eliminación de valores atípicos mediante el criterio IQR permitió estabilizar la distribución de las variables de salida y mejorar de forma significativa el desempeño de los modelos, especialmente en las salidas `IVA` y `FODINFA`.
+
+El modelo de Random Forest mostró un desempeño sobresaliente para `FODINFA` (R² = 0.96) y un desempeño adecuado para `IVA` (R² = 0.84), confirmando su capacidad para capturar relaciones no lineales complejas entre las variables de entrada y salida.
+
+En contraste, el bajo valor del coeficiente de determinación obtenido para `ADVALOREM` (R² = 0.06) evidencia que este tributo depende de factores adicionales no considerados en el modelo actual, como variables arancelarias específicas, normativa tributaria o condiciones regulatorias particulares.
+
+Finalmente, se concluye que la metodología propuesta es adecuada para la predicción de tributos como `IVA` y `FODINFA`, mientras que para `ADVALOREM` se requiere una reformulación del conjunto de variables explicativas, incorporando información normativa y arancelaria más detallada para mejorar su capacidad predictiva.
