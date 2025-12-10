@@ -1,11 +1,15 @@
 ---
-title: "Entrega_Final_PP"
+title: "Entrega Final - Proyecto de Predicción de Tributos"
 author: "Pablo Proaño"
-date: "2025-12-01"
+date: "2025-12-05"
 output:
-  html_document: default
+  html_document:
+    toc: true
+    toc_float: true
+    toc_depth: 3
   pdf_document: default
 ---
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
